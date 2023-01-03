@@ -11,14 +11,16 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Maps;
 
-
 public class HttpHeaders {
   private static final Logger log = LoggerFactory.getLogger(HttpHeaders.class);
 
   final public String method;
+  final public String fullPath;
   final public String path;
   final public String version;
-  private static Map<String, String> headers = Maps.newHashMap();
+
+  private Map<String, String> headers;
+  private Map<String, String> queries;
 
   public HttpHeaders(String headerString) {
     List<String> lines = new ArrayList<>(Arrays.asList(headerString.split("\r?\n")));
@@ -27,9 +29,20 @@ public class HttpHeaders {
 
     String[] firstWords = firstLine.split(" ");
     method = firstWords[0];
-    path = firstWords[1];
+    fullPath = firstWords[1];
     version = firstWords[2];
-    
+
+    int queryIndex = fullPath.indexOf("?");
+    if (queryIndex == -1) {
+      path = fullPath;
+      queries = Maps.newHashMap();
+    } else {
+      path = fullPath.substring(0, queryIndex);
+      String queryString = fullPath.substring(queryIndex + 1);
+      queries = HttpRequestUtils.parseQueryString(queryString);
+    }
+
+    headers = Maps.newHashMap();
     Iterator<String> iter = lines.iterator();
     while (iter.hasNext()) {
       String line = iter.next();
@@ -40,7 +53,11 @@ public class HttpHeaders {
       headers.put(key, value);
     }
   }
-  
+
+  public String getQuery(String key) {
+    return queries.getOrDefault(key, "");
+  }
+
   public void log() {
     log.info("method: " + method);
     log.info("path: " + path);

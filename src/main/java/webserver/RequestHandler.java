@@ -13,6 +13,8 @@ import java.nio.file.Paths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import model.User;
+import service.AuthService;
 import util.HttpHeaders;
 import util.HttpMethods;
 
@@ -38,17 +40,28 @@ public class RequestHandler extends Thread {
             while (!"".equals(line)) {
                 headerString += line;
                 line = buffer.readLine();
-                
-                if (line == null) break;
+
+                if (line == null)
+                    break;
             }
-            
+
             HttpHeaders headers = new HttpHeaders(headerString);
 
             headers.log();
 
             DataOutputStream dos = new DataOutputStream(out);
 
-            if (headers.method.equals(HttpMethods.GET)) {
+            if (headers.method.equals(HttpMethods.GET) && headers.path.equals("/user/create")) {
+                AuthService authService = new AuthService();
+
+                User user = new User(
+                        headers.getQuery("userId"),
+                        headers.getQuery("pasword"),
+                        headers.getQuery("name"),
+                        headers.getQuery("email"));
+
+                authService.signUp(user);
+            } else if (headers.method.equals(HttpMethods.GET)) {
                 byte[] htmlBytes = Files.readAllBytes(Paths.get("./webapp" + headers.path));
                 response200Header(dos, htmlBytes.length);
                 responseBody(dos, htmlBytes);
