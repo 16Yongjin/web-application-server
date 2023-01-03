@@ -1,5 +1,9 @@
 package util;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -11,18 +15,52 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Maps;
 
-public class HttpHeaders {
-  private static final Logger log = LoggerFactory.getLogger(HttpHeaders.class);
+public class HttpRequest {
+  private static final Logger log = LoggerFactory.getLogger(HttpRequest.class);
 
   final public String method;
   final public String fullPath;
   final public String path;
   final public String version;
+  final public String headerString;
+  final public String bodyString;
 
   private Map<String, String> headers;
   private Map<String, String> queries;
 
-  public HttpHeaders(String headerString) {
+  public static HttpRequest parseStream(InputStream in) throws IOException {
+    InputStreamReader reader = new InputStreamReader(in);
+    BufferedReader buffer = new BufferedReader(reader);
+
+    String httpString = "";
+    String line = buffer.readLine();
+    while (!"".equals(line)) {
+      httpString += line;
+      line = buffer.readLine();
+
+      if (line == null)
+        break;
+    }
+
+    HttpRequest request = new HttpRequest(httpString);
+    return request;
+  }
+
+  public HttpRequest(String httpString) {
+    int bodyIndex = httpString.indexOf("\n\n");
+
+    log.info("bodyIndex: " + bodyIndex);
+    if (bodyIndex == -1) {
+      headerString = httpString;
+      bodyString = "";
+    } else {
+      headerString = httpString.substring(0, bodyIndex);
+      bodyString = httpString.substring(bodyIndex + 2);
+    }
+
+    log.info("headerString " + headerString);
+    log.info("bodyString " + bodyString);
+
     List<String> lines = new ArrayList<>(Arrays.asList(headerString.split("\r?\n")));
 
     String firstLine = lines.remove(0);
@@ -58,8 +96,19 @@ public class HttpHeaders {
     return queries.getOrDefault(key, "");
   }
 
+  public Map<String, String> getForm() {
+    String formType = "application/x-ww-form-urlencoded";
+
+    if (headers.getOrDefault("Content-Type", "").equals(formType)) {
+      return HttpRequestUtils.parseQueryString(bodyString);
+    } else {
+      return Maps.newHashMap();
+    }
+  }
+
   public void log() {
     log.info("method: " + method);
     log.info("path: " + path);
   }
+
 }

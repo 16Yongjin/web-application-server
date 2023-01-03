@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import model.User;
 import service.AuthService;
-import util.HttpHeaders;
+import util.HttpRequest;
 import util.HttpMethods;
 
 public class RequestHandler extends Thread {
@@ -32,37 +32,26 @@ public class RequestHandler extends Thread {
                 connection.getPort());
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
-            InputStreamReader reader = new InputStreamReader(in);
-            BufferedReader buffer = new BufferedReader(reader);
+            HttpRequest request = HttpRequest.parseStream(in);
 
-            String headerString = "";
-            String line = buffer.readLine();
-            while (!"".equals(line)) {
-                headerString += line;
-                line = buffer.readLine();
-
-                if (line == null)
-                    break;
-            }
-
-            HttpHeaders headers = new HttpHeaders(headerString);
-
-            headers.log();
+            request.log();
 
             DataOutputStream dos = new DataOutputStream(out);
 
-            if (headers.method.equals(HttpMethods.GET) && headers.path.equals("/user/create")) {
+            if (request.method.equals(HttpMethods.POST) && request.path.equals("/user/create")) {
                 AuthService authService = new AuthService();
 
                 User user = new User(
-                        headers.getQuery("userId"),
-                        headers.getQuery("pasword"),
-                        headers.getQuery("name"),
-                        headers.getQuery("email"));
+                        request.getQuery("userId"),
+                        request.getQuery("pasword"),
+                        request.getQuery("name"),
+                        request.getQuery("email"));
 
+                log.info(user.toString());
                 authService.signUp(user);
-            } else if (headers.method.equals(HttpMethods.GET)) {
-                byte[] htmlBytes = Files.readAllBytes(Paths.get("./webapp" + headers.path));
+                response302(dos);
+            } else if (request.method.equals(HttpMethods.GET)) {
+                byte[] htmlBytes = Files.readAllBytes(Paths.get("./webapp" + request.path));
                 response200Header(dos, htmlBytes.length);
                 responseBody(dos, htmlBytes);
             } else {
@@ -81,6 +70,17 @@ public class RequestHandler extends Thread {
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response302(DataOutputStream dos) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: /index.html\r\n");
+            dos.writeBytes("\r\n");
+            dos.flush();
         } catch (IOException e) {
             log.error(e.getMessage());
         }

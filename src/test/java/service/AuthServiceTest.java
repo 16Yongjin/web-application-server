@@ -2,30 +2,38 @@ package service;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Map;
+
 import org.junit.Test;
 
 import db.DataBase;
 import model.User;
-import util.HttpHeaders;
+import util.HttpRequest;
 
 public class AuthServiceTest {
   @Test
-  public void parseHttpHeadersIndexHtml() {
-    String httpHeaderString = String.join("\r\n",
-        "GET /user/create?userId=test&password=password&name=Tes&email=test@test.com HTTP/1.1",
+  public void signUpTest() {
+    String httpString = String.join("\n",
+        "POST /user/create HTTP/1.1",
         "Host: localhost:8080",
+        "Content-Length: 58",
+        "Content-Type: application/x-ww-form-urlencoded",
         "Connection: keep-alive",
-        "Accept: */*");
+        "Accept: */*",
+        "",
+        "userId=test&password=password&name=Tes&email=test@test.com");
 
-    HttpHeaders headers = new HttpHeaders(httpHeaderString);
+    HttpRequest request = new HttpRequest(httpString);
 
     AuthService authService = new AuthService();
 
+    Map<String, String> form = request.getForm();
+
     User newUser = new User(
-        headers.getQuery("userId"),
-        headers.getQuery("pasword"),
-        headers.getQuery("name"),
-        headers.getQuery("email"));
+        form.get("userId"),
+        form.get("pasword"),
+        form.get("name"),
+        form.get("email"));
 
     authService.signUp(newUser);
 
