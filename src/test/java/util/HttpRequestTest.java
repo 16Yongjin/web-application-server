@@ -23,7 +23,7 @@ public class HttpRequestTest {
   @Test
   public void parsePostSignUp() {
     String bodyString = "userId=test&password=password&name=Tes&email=test@test.com";
-    String httpString = String.join("\n",
+    String httpString = String.join("\r\n",
         "POST /user/create HTTP/1.1",
         "Host: localhost:8080",
         "Content-Length: 58",
@@ -38,6 +38,7 @@ public class HttpRequestTest {
     assertEquals(HttpMethods.POST, request.method);
     assertEquals("/user/create", request.path);
     assertEquals("HTTP/1.1", request.version);
+    assertEquals("application/x-ww-form-urlencoded", request.getHeader("Content-Type"));
     assertEquals(bodyString, request.bodyString);
   }
 }

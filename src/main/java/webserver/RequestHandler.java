@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,15 +42,39 @@ public class RequestHandler extends Thread {
             if (request.method.equals(HttpMethods.POST) && request.path.equals("/user/create")) {
                 AuthService authService = new AuthService();
 
+                Map<String, String> signUpForm = request.getForm();
+
                 User user = new User(
-                        request.getQuery("userId"),
-                        request.getQuery("pasword"),
-                        request.getQuery("name"),
-                        request.getQuery("email"));
+                        signUpForm.get("userId"),
+                        signUpForm.get("password"),
+                        signUpForm.get("name"),
+                        signUpForm.get("email"));
 
                 log.info(user.toString());
+
                 authService.signUp(user);
-                response302(dos);
+                response302(dos, "/index.html");
+                responseBody(dos, "".getBytes());
+            } else if (request.method.equals(HttpMethods.POST) && request.path.equals("/user/login")) {
+                AuthService authService = new AuthService();
+
+                Map<String, String> loginForm = request.getForm();
+
+                String userId = loginForm.get("userId");
+                String password = loginForm.get("password");
+
+                boolean loginSuccess = authService.login(userId, password);
+
+                if (loginSuccess) {
+                    response302(dos, "/index.html");
+                    responseCookie(dos, "logined", "true");
+                    responseBody(dos, "".getBytes());
+                } else {
+                    response302(dos, "/user/login_failed.html");
+                    responseCookie(dos, "logined", "false");
+                    responseBody(dos, "".getBytes());
+                }
+
             } else if (request.method.equals(HttpMethods.GET)) {
                 byte[] htmlBytes = Files.readAllBytes(Paths.get("./webapp" + request.path));
                 response200Header(dos, htmlBytes.length);
@@ -75,12 +100,19 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void response302(DataOutputStream dos) {
+    private void response302(DataOutputStream dos, String location) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: /index.html\r\n");
+            dos.writeBytes("Location: " + location + "\r\n");
             dos.writeBytes("\r\n");
-            dos.flush();
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void responseCookie(DataOutputStream dos, String key, String value) {
+        try {
+            dos.writeBytes("Set-Cookie: " + key + "=" + value + "\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }

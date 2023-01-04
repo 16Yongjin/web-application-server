@@ -22,6 +22,7 @@ public class HttpRequest {
   final public String fullPath;
   final public String path;
   final public String version;
+  final public String httpString;
   final public String headerString;
   final public String bodyString;
 
@@ -47,19 +48,18 @@ public class HttpRequest {
   }
 
   public HttpRequest(String httpString) {
-    int bodyIndex = httpString.indexOf("\n\n");
+    this.httpString = httpString;
+    int bodyIndex = httpString.indexOf("\r\n\r\n");
 
     log.info("bodyIndex: " + bodyIndex);
+
     if (bodyIndex == -1) {
       headerString = httpString;
       bodyString = "";
     } else {
       headerString = httpString.substring(0, bodyIndex);
-      bodyString = httpString.substring(bodyIndex + 2);
+      bodyString = httpString.substring(bodyIndex + 4);
     }
-
-    log.info("headerString " + headerString);
-    log.info("bodyString " + bodyString);
 
     List<String> lines = new ArrayList<>(Arrays.asList(headerString.split("\r?\n")));
 
@@ -84,7 +84,7 @@ public class HttpRequest {
     Iterator<String> iter = lines.iterator();
     while (iter.hasNext()) {
       String line = iter.next();
-      String[] keyVal = line.split(": ?");
+      String[] keyVal = line.split(": ");
       String key = keyVal[0];
       String value = keyVal[1];
 
@@ -96,19 +96,19 @@ public class HttpRequest {
     return queries.getOrDefault(key, "");
   }
 
-  public Map<String, String> getForm() {
-    String formType = "application/x-ww-form-urlencoded";
+  public String getHeader(String key) {
+    return headers.getOrDefault(key, "");
+  }
 
-    if (headers.getOrDefault("Content-Type", "").equals(formType)) {
-      return HttpRequestUtils.parseQueryString(bodyString);
-    } else {
-      return Maps.newHashMap();
-    }
+  public Map<String, String> getForm() {
+    return HttpRequestUtils.parseQueryString(bodyString);
   }
 
   public void log() {
     log.info("method: " + method);
     log.info("path: " + path);
+    // log.info("headerString: " + httpString);
+    // log.info("headerString: " + headerString);
+    // log.info("bodyString: " + bodyString);
   }
-
 }
