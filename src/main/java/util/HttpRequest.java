@@ -1,6 +1,7 @@
 package util;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -22,44 +23,44 @@ public class HttpRequest {
   final public String fullPath;
   final public String path;
   final public String version;
-  final public String httpString;
   final public String headerString;
   final public String bodyString;
 
   private Map<String, String> headers;
   private Map<String, String> queries;
 
-  public static HttpRequest parseStream(InputStream in) throws IOException {
-    InputStreamReader reader = new InputStreamReader(in);
-    BufferedReader buffer = new BufferedReader(reader);
+  public static HttpRequest parseString(String httpString) throws IOException {
+    InputStream stream = new ByteArrayInputStream(httpString.getBytes());
+    return parseStream(stream);
+  }
 
-    String httpString = "";
+  public static HttpRequest parseStream(InputStream in) throws IOException {
+    BufferedReader buffer = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+
+    String headerString = "";
     String line = buffer.readLine();
+    int contentLength = 0;
     while (!"".equals(line)) {
-      httpString += line;
+      headerString += line + "\n";
+
+      if (line.contains("Content-Length")) {
+        contentLength = getContentLength(line);
+      }
       line = buffer.readLine();
 
       if (line == null)
         break;
     }
 
-    HttpRequest request = new HttpRequest(httpString);
+    String bodyString = IOUtils.readData(buffer, contentLength);
+
+    HttpRequest request = new HttpRequest(headerString, bodyString);
     return request;
   }
 
-  public HttpRequest(String httpString) {
-    this.httpString = httpString;
-    int bodyIndex = httpString.indexOf("\r\n\r\n");
-
-    log.info("bodyIndex: " + bodyIndex);
-
-    if (bodyIndex == -1) {
-      headerString = httpString;
-      bodyString = "";
-    } else {
-      headerString = httpString.substring(0, bodyIndex);
-      bodyString = httpString.substring(bodyIndex + 4);
-    }
+  public HttpRequest(String headerString, String bodyString) {
+    this.headerString = headerString;
+    this.bodyString = bodyString;
 
     List<String> lines = new ArrayList<>(Arrays.asList(headerString.split("\r?\n")));
 
@@ -100,15 +101,21 @@ public class HttpRequest {
     return headers.getOrDefault(key, "");
   }
 
+  public Map<String, String> getCookie() {
+    return HttpRequestUtils.parseCookies(getHeader("Cookie"));
+  }
+
   public Map<String, String> getForm() {
     return HttpRequestUtils.parseQueryString(bodyString);
+  }
+
+  private static int getContentLength(String line) {
+    String[] headerTokens = line.split(":");
+    return Integer.parseInt(headerTokens[1].trim());
   }
 
   public void log() {
     log.info("method: " + method);
     log.info("path: " + path);
-    // log.info("headerString: " + httpString);
-    // log.info("headerString: " + headerString);
-    // log.info("bodyString: " + bodyString);
   }
 }

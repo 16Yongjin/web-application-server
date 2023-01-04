@@ -15,6 +15,7 @@ public class AuthService {
     }
 
     DataBase.addUser(user);
+    log.debug(user.toString());
 
     return true;
   }
@@ -22,10 +23,10 @@ public class AuthService {
   public boolean login(String userId, String password) {
     User user = DataBase.findUserById(userId);
 
+    log.debug(user.toString());
+
     if (user == null)
       return false;
-
-    log.info(user.toString());
 
     if (user.getPassword().equals(password)) {
       return true;

@@ -2,6 +2,7 @@ package webserver;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -9,6 +10,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -16,7 +18,9 @@ import org.slf4j.LoggerFactory;
 
 import model.User;
 import service.AuthService;
+import service.UserService;
 import util.HttpRequest;
+import util.LoginChecker;
 import util.HttpMethods;
 
 public class RequestHandler extends Thread {
@@ -36,6 +40,8 @@ public class RequestHandler extends Thread {
             HttpRequest request = HttpRequest.parseStream(in);
 
             request.log();
+
+            boolean logined = LoginChecker.isLogined(request);
 
             DataOutputStream dos = new DataOutputStream(out);
 
@@ -66,19 +72,37 @@ public class RequestHandler extends Thread {
                 boolean loginSuccess = authService.login(userId, password);
 
                 if (loginSuccess) {
-                    response302(dos, "/index.html");
-                    responseCookie(dos, "logined", "true");
-                    responseBody(dos, "".getBytes());
+                    response302LoginSuccess(dos);
                 } else {
-                    response302(dos, "/user/login_failed.html");
+                    responseResource(out, "/user/login_failed.html");
                     responseCookie(dos, "logined", "false");
                     responseBody(dos, "".getBytes());
                 }
 
+            } else if (request.method.equals(HttpMethods.GET) && request.path.equals("/user/list")) {
+                if (!logined) {
+                    responseResource(out, "/user/login.html");
+                    return;
+                }
+
+                UserService userService = new UserService();
+                Collection<User> users = userService.list();
+
+                StringBuilder builder = new StringBuilder();
+                builder.append("<table border='1'>");
+                for (User user : users) {
+                    builder.append("<tr>");
+                    builder.append("<td>" + user.getUserId() + "</td>");
+                    builder.append("<td>" + user.getName() + "</td>");
+                    builder.append("<td>" + user.getEmail() + "</td>");
+                    builder.append("</tr>");
+                }
+                builder.append("</table>");
+                byte[] body = builder.toString().getBytes();
+                response200Header(dos, body.length);
+                responseBody(dos, body);
             } else if (request.method.equals(HttpMethods.GET)) {
-                byte[] htmlBytes = Files.readAllBytes(Paths.get("./webapp" + request.path));
-                response200Header(dos, htmlBytes.length);
-                responseBody(dos, htmlBytes);
+                responseResource(out, request.path);
             } else {
                 byte[] body = "Hello World".getBytes();
                 response200Header(dos, body.length);
@@ -104,6 +128,24 @@ public class RequestHandler extends Thread {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
             dos.writeBytes("Location: " + location + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void responseResource(OutputStream out, String url) throws IOException {
+        DataOutputStream dos = new DataOutputStream(out);
+        byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
+        response200Header(dos, body.length);
+        responseBody(dos, body);
+    }
+
+    private void response302LoginSuccess(DataOutputStream dos) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Set-Cookie: logined=true\r\n");
+            dos.writeBytes("Location: /index.html\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
