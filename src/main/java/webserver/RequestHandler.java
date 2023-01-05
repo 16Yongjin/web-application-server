@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import model.User;
 import service.AuthService;
 import service.UserService;
-import util.HttpRequest;
 import util.LoginChecker;
 import util.HttpMethods;
 

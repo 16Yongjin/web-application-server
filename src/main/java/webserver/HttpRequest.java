@@ -1,4 +1,4 @@
-package util;
+package webserver;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -15,6 +15,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Maps;
+
+import util.HttpMethods;
+import util.HttpRequestUtils;
+import util.IOUtils;
 
 public class HttpRequest {
   private static final Logger log = LoggerFactory.getLogger(HttpRequest.class);

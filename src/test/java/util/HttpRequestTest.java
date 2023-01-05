@@ -9,6 +9,8 @@ import java.io.InputStream;
 
 import org.junit.Test;
 
+import webserver.HttpRequest;
+
 public class HttpRequestTest {
   private String testDir = "./src/test/resources/";
 

@@ -6,6 +6,8 @@ import java.io.IOException;
 
 import org.junit.Test;
 
+import webserver.HttpRequest;
+
 public class LoginCheckerTest {
   @Test
   public void checkLoginTest() {

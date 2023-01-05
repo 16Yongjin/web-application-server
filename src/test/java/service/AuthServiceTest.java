@@ -14,7 +14,7 @@ import org.junit.Test;
 
 import db.DataBase;
 import model.User;
-import util.HttpRequest;
+import webserver.HttpRequest;
 
 public class AuthServiceTest {
   @Before
