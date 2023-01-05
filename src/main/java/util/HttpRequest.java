@@ -28,6 +28,7 @@ public class HttpRequest {
 
   private Map<String, String> headers;
   private Map<String, String> queries;
+  private Map<String, String> form;
 
   public static HttpRequest parseString(String httpString) throws IOException {
     InputStream stream = new ByteArrayInputStream(httpString.getBytes());
@@ -91,6 +92,8 @@ public class HttpRequest {
 
       headers.put(key, value);
     }
+
+    form = HttpRequestUtils.parseQueryString(bodyString);
   }
 
   public String getQuery(String key) {
@@ -106,7 +109,20 @@ public class HttpRequest {
   }
 
   public Map<String, String> getForm() {
-    return HttpRequestUtils.parseQueryString(bodyString);
+    return form;
+  }
+
+  public String getForm(String key) {
+    return form.getOrDefault(key, "");
+  }
+
+  public String getParameter(String key) {
+    if (method.equals(HttpMethods.GET))
+      return getQuery(key);
+    if (method.equals(HttpMethods.POST))
+      return getForm(key);
+
+    return "";
   }
 
   private static int getContentLength(String line) {
