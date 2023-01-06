@@ -1,7 +1,6 @@
 package controller;
 
 import java.io.IOException;
-import java.util.Map;
 
 import service.AuthService;
 import webserver.HttpRequest;
@@ -14,10 +13,8 @@ public class LoginController extends AbstractController {
 
       AuthService authService = new AuthService();
 
-      Map<String, String> loginForm = request.getForm();
-
-      String userId = loginForm.get("userId");
-      String password = loginForm.get("password");
+      String userId = request.getParameter("userId");
+      String password = request.getParameter("password");
 
       boolean loginSuccess = authService.login(userId, password);
 

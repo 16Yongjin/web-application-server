@@ -3,12 +3,7 @@ package service;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Map;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -39,13 +34,11 @@ public class AuthServiceTest {
 
       AuthService authService = new AuthService();
 
-      Map<String, String> form = request.getForm();
-
       User newUser = new User(
-          form.get("userId"),
-          form.get("pasword"),
-          form.get("name"),
-          form.get("email"));
+          request.getParameter("userId"),
+          request.getParameter("pasword"),
+          request.getParameter("name"),
+          request.getParameter("email"));
 
       authService.signUp(newUser);
 
@@ -76,10 +69,8 @@ public class AuthServiceTest {
 
       AuthService authService = new AuthService();
 
-      Map<String, String> form = request.getForm();
-
-      String userId = form.get("userId");
-      String password = form.get("password");
+      String userId = request.getParameter("userId");
+      String password = request.getParameter("password");
 
       boolean success = authService.login(userId, password);
 

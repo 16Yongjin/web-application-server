@@ -5,16 +5,11 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.Maps;
 
 import util.HttpMethods;
 import util.HttpRequestUtils;
@@ -23,16 +18,10 @@ import util.IOUtils;
 public class HttpRequest {
   private static final Logger log = LoggerFactory.getLogger(HttpRequest.class);
 
-  final public String method;
-  final public String fullPath;
-  final public String path;
-  final public String version;
-  final public String headerString;
-  final public String bodyString;
-
-  private Map<String, String> headers;
-  private Map<String, String> queries;
-  private Map<String, String> form;
+  private String method;
+  private String path;
+  private Map<String, String> headers = new HashMap<>();
+  private Map<String, String> params = new HashMap<>();
 
   public static HttpRequest parseString(String httpString) throws IOException {
     InputStream stream = new ByteArrayInputStream(httpString.getBytes());
@@ -40,98 +29,78 @@ public class HttpRequest {
   }
 
   public static HttpRequest parseStream(InputStream in) throws IOException {
-    BufferedReader buffer = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+    return new HttpRequest(in);
+  }
 
-    String headerString = "";
-    String line = buffer.readLine();
-    int contentLength = 0;
-    while (!"".equals(line)) {
-      headerString += line + "\n";
+  public HttpRequest(InputStream in) {
+    try {
 
-      if (line.contains("Content-Length")) {
-        contentLength = getContentLength(line);
+      BufferedReader buffer = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+
+      String line = buffer.readLine();
+      if (line == null) {
+        return;
       }
+
+      processRequestLine(line);
+
       line = buffer.readLine();
+      while (!line.equals("")) {
+        log.debug("headers : {}", line);
+        String[] tokens = line.split(":");
+        headers.put(tokens[0].trim(), tokens[1].trim());
+        line = buffer.readLine();
 
-      if (line == null)
-        break;
+        if (line == null)
+          break;
+      }
+
+      if (HttpMethods.POST.equals(method)) {
+        String body = IOUtils.readData(buffer, Integer.parseInt(headers.get("Content-Length")));
+        params = HttpRequestUtils.parseQueryString(body);
+      }
+    } catch (IOException io) {
+      log.error(io.getMessage());
     }
-
-    String bodyString = IOUtils.readData(buffer, contentLength);
-
-    HttpRequest request = new HttpRequest(headerString, bodyString);
-    return request;
   }
 
-  public HttpRequest(String headerString, String bodyString) {
-    this.headerString = headerString;
-    this.bodyString = bodyString;
+  private void processRequestLine(String requestLine) {
+    log.debug("request line : {}", requestLine);
+    String[] tokens = requestLine.split(" ");
+    method = tokens[0];
 
-    List<String> lines = new ArrayList<>(Arrays.asList(headerString.split("\r?\n")));
+    if (HttpMethods.POST.equals(method)) {
+      path = tokens[1];
+      return;
+    }
 
-    String firstLine = lines.remove(0);
-
-    String[] firstWords = firstLine.split(" ");
-    method = firstWords[0];
-    fullPath = firstWords[1];
-    version = firstWords[2];
-
-    int queryIndex = fullPath.indexOf("?");
+    int queryIndex = tokens[1].indexOf("?");
     if (queryIndex == -1) {
-      path = fullPath;
-      queries = Maps.newHashMap();
+      path = tokens[1];
     } else {
-      path = fullPath.substring(0, queryIndex);
-      String queryString = fullPath.substring(queryIndex + 1);
-      queries = HttpRequestUtils.parseQueryString(queryString);
+      path = tokens[1].substring(0, queryIndex);
+      params = HttpRequestUtils.parseQueryString(tokens[1].substring(queryIndex + 1));
     }
-
-    headers = Maps.newHashMap();
-    Iterator<String> iter = lines.iterator();
-    while (iter.hasNext()) {
-      String line = iter.next();
-      String[] keyVal = line.split(": ");
-      String key = keyVal[0];
-      String value = keyVal[1];
-
-      headers.put(key, value);
-    }
-
-    form = HttpRequestUtils.parseQueryString(bodyString);
   }
 
-  public String getQuery(String key) {
-    return queries.getOrDefault(key, "");
+  public String getMethod() {
+    return method;
+  }
+
+  public String getPath() {
+    return path;
   }
 
   public String getHeader(String key) {
-    return headers.getOrDefault(key, "");
-  }
-
-  public Map<String, String> getCookie() {
-    return HttpRequestUtils.parseCookies(getHeader("Cookie"));
-  }
-
-  public Map<String, String> getForm() {
-    return form;
-  }
-
-  public String getForm(String key) {
-    return form.getOrDefault(key, "");
+    return headers.get(key);
   }
 
   public String getParameter(String key) {
-    if (method.equals(HttpMethods.GET))
-      return getQuery(key);
-    if (method.equals(HttpMethods.POST))
-      return getForm(key);
-
-    return "";
+    return params.get(key);
   }
 
-  private static int getContentLength(String line) {
-    String[] headerTokens = line.split(":");
-    return Integer.parseInt(headerTokens[1].trim());
+  public Map<String, String> getCookies() {
+    return HttpRequestUtils.parseCookies(headers.get("Cookie"));
   }
 
   public void log() {

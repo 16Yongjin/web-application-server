@@ -44,15 +44,15 @@ public class RequestHandler extends Thread {
             request.log();
 
             Controller controller;
-            if (controllers.containsKey(request.path)) {
-                controller = controllers.get(request.path);
+            if (controllers.containsKey(request.getPath())) {
+                controller = controllers.get(request.getPath());
             } else {
                 controller = controllers.get("DEFAULT");
             }
 
             controller.service(request, response);
 
-            if (request.method.equals(HttpMethods.GET)) {
+            if (request.getMethod().equals(HttpMethods.GET)) {
             } else {
                 response.forwardBody("Hello World");
             }
