@@ -4,18 +4,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Maps;
-
 import controller.Controller;
-import controller.CreateUserController;
-import controller.DefaultController;
-import controller.ListUserController;
-import controller.LoginController;
+import controller.RequestMapping;
 import util.HttpMethod;
 
 public class RequestHandler extends Thread {
@@ -27,15 +20,10 @@ public class RequestHandler extends Thread {
         this.connection = connectionSocket;
     }
 
+    @Override
     public void run() {
         log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
                 connection.getPort());
-
-        Map<String, Controller> controllers = Maps.newHashMap();
-        controllers.put("/user/create", new CreateUserController());
-        controllers.put("/user/list", new ListUserController());
-        controllers.put("/user/login", new LoginController());
-        controllers.put("DEFAULT", new DefaultController());
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             HttpRequest request = HttpRequest.parseStream(in);
@@ -43,13 +31,7 @@ public class RequestHandler extends Thread {
 
             request.log();
 
-            Controller controller;
-            if (controllers.containsKey(request.getPath())) {
-                controller = controllers.get(request.getPath());
-            } else {
-                controller = controllers.get("DEFAULT");
-            }
-
+            Controller controller = RequestMapping.getController(request.getPath());
             controller.service(request, response);
 
             if (request.getMethod().equals(HttpMethod.GET)) {

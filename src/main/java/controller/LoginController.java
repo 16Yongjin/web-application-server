@@ -1,7 +1,5 @@
 package controller;
 
-import java.io.IOException;
-
 import service.AuthService;
 import webserver.HttpRequest;
 import webserver.HttpResponse;

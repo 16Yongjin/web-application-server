@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,19 +23,19 @@ public class HttpRequest {
   private Map<String, String> headers = new HashMap<>();
   private Map<String, String> params = new HashMap<>();
 
-  public static HttpRequest parseString(String httpString) throws IOException {
+  public static HttpRequest parseString(String httpString) {
     InputStream stream = new ByteArrayInputStream(httpString.getBytes());
     return parseStream(stream);
   }
 
-  public static HttpRequest parseStream(InputStream in) throws IOException {
+  public static HttpRequest parseStream(InputStream in) {
     return new HttpRequest(in);
   }
 
   public HttpRequest(InputStream in) {
     try {
 
-      BufferedReader buffer = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+      BufferedReader buffer = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
 
       String line = buffer.readLine();
       if (line == null) {
@@ -90,7 +91,7 @@ public class HttpRequest {
   }
 
   public void log() {
-    log.info("method: " + getMethod());
-    log.info("path: " + getPath());
+    log.info("method: {}", getMethod());
+    log.info("path: {}", getPath());
   }
 }

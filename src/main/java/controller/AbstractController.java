@@ -16,8 +16,10 @@ public class AbstractController implements Controller {
   }
 
   public void doPost(HttpRequest request, HttpResponse response) {
+    // implement this
   }
 
   public void doGet(HttpRequest request, HttpResponse response) {
+    // implement this
   }
 }
