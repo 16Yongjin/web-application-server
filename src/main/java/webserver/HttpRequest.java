@@ -11,15 +11,14 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import util.HttpMethods;
+import util.HttpMethod;
 import util.HttpRequestUtils;
 import util.IOUtils;
 
 public class HttpRequest {
   private static final Logger log = LoggerFactory.getLogger(HttpRequest.class);
 
-  private String method;
-  private String path;
+  private RequestLine requestLine;
   private Map<String, String> headers = new HashMap<>();
   private Map<String, String> params = new HashMap<>();
 
@@ -42,7 +41,7 @@ public class HttpRequest {
         return;
       }
 
-      processRequestLine(line);
+      requestLine = new RequestLine(line);
 
       line = buffer.readLine();
       while (!line.equals("")) {
@@ -55,40 +54,23 @@ public class HttpRequest {
           break;
       }
 
-      if (HttpMethods.POST.equals(method)) {
+      if (requestLine.getMethod().isPost()) {
         String body = IOUtils.readData(buffer, Integer.parseInt(headers.get("Content-Length")));
         params = HttpRequestUtils.parseQueryString(body);
+      } else {
+        params = requestLine.getParams();
       }
     } catch (IOException io) {
       log.error(io.getMessage());
     }
   }
 
-  private void processRequestLine(String requestLine) {
-    log.debug("request line : {}", requestLine);
-    String[] tokens = requestLine.split(" ");
-    method = tokens[0];
-
-    if (HttpMethods.POST.equals(method)) {
-      path = tokens[1];
-      return;
-    }
-
-    int queryIndex = tokens[1].indexOf("?");
-    if (queryIndex == -1) {
-      path = tokens[1];
-    } else {
-      path = tokens[1].substring(0, queryIndex);
-      params = HttpRequestUtils.parseQueryString(tokens[1].substring(queryIndex + 1));
-    }
-  }
-
-  public String getMethod() {
-    return method;
+  public HttpMethod getMethod() {
+    return requestLine.getMethod();
   }
 
   public String getPath() {
-    return path;
+    return requestLine.getPath();
   }
 
   public String getHeader(String key) {
@@ -99,12 +81,16 @@ public class HttpRequest {
     return params.get(key);
   }
 
+  public boolean isLogined() {
+    return getCookies().getOrDefault("logined", "false").equals("true");
+  }
+
   public Map<String, String> getCookies() {
     return HttpRequestUtils.parseCookies(headers.get("Cookie"));
   }
 
   public void log() {
-    log.info("method: " + method);
-    log.info("path: " + path);
+    log.info("method: " + getMethod());
+    log.info("path: " + getPath());
   }
 }

@@ -1,6 +1,7 @@
 package webserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,7 +10,7 @@ import java.io.InputStream;
 
 import org.junit.Test;
 
-import util.HttpMethods;
+import util.HttpMethod;
 
 public class HttpRequestTest {
   private String testDir = "./src/test/resources/";
@@ -24,7 +25,7 @@ public class HttpRequestTest {
 
     HttpRequest request = HttpRequest.parseString(httpString);
 
-    assertEquals(HttpMethods.GET, request.getMethod());
+    assertEquals(HttpMethod.GET, request.getMethod());
     assertEquals("/index.html", request.getPath());
   }
 
@@ -33,7 +34,7 @@ public class HttpRequestTest {
     InputStream in = new FileInputStream(new File(testDir + "Http_GET.txt"));
     HttpRequest request = HttpRequest.parseStream(in);
 
-    assertEquals(HttpMethods.GET, request.getMethod());
+    assertEquals(HttpMethod.GET, request.getMethod());
     assertEquals("/user/create", request.getPath());
     assertEquals("keep-alive", request.getHeader("Connection"));
     assertEquals("javajigi", request.getParameter("userId"));
@@ -53,7 +54,7 @@ public class HttpRequestTest {
 
     HttpRequest request = HttpRequest.parseString(httpString);
 
-    assertEquals(HttpMethods.POST, request.getMethod());
+    assertEquals(HttpMethod.POST, request.getMethod());
     assertEquals("/user/create", request.getPath());
     assertEquals("application/x-ww-form-urlencoded", request.getHeader("Content-Type"));
   }
@@ -63,7 +64,7 @@ public class HttpRequestTest {
     InputStream in = new FileInputStream(new File(testDir + "Http_POST.txt"));
     HttpRequest request = HttpRequest.parseStream(in);
 
-    assertEquals(HttpMethods.POST, request.getMethod());
+    assertEquals(HttpMethod.POST, request.getMethod());
     assertEquals("/user/create", request.getPath());
     assertEquals("keep-alive", request.getHeader("Connection"));
     assertEquals("javajigi", request.getParameter("userId"));
@@ -81,5 +82,19 @@ public class HttpRequestTest {
     HttpRequest request = HttpRequest.parseString(httpString);
 
     assertEquals("logined=true", request.getHeader("Cookie"));
+  }
+
+  @Test
+  public void checkLoginTest() throws IOException {
+    String httpString = String.join("\r\n",
+        "GET /user/list HTTP/1.1",
+        "Host: localhost:8080",
+        "Cookie: logined=true",
+        "Connection: keep-alive",
+        "Accept: */*");
+
+    HttpRequest request = HttpRequest.parseString(httpString);
+
+    assertTrue(request.isLogined());
   }
 }

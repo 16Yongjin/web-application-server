@@ -16,7 +16,7 @@ import controller.CreateUserController;
 import controller.DefaultController;
 import controller.ListUserController;
 import controller.LoginController;
-import util.HttpMethods;
+import util.HttpMethod;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -52,7 +52,7 @@ public class RequestHandler extends Thread {
 
             controller.service(request, response);
 
-            if (request.getMethod().equals(HttpMethods.GET)) {
+            if (request.getMethod().equals(HttpMethod.GET)) {
             } else {
                 response.forwardBody("Hello World");
             }

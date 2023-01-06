@@ -5,7 +5,6 @@ import java.util.Collection;
 
 import model.User;
 import service.UserService;
-import util.LoginChecker;
 import webserver.HttpRequest;
 import webserver.HttpResponse;
 
@@ -13,9 +12,7 @@ public class ListUserController extends AbstractController {
   @Override
   public void doGet(HttpRequest request, HttpResponse response) {
     try {
-      boolean logined = LoginChecker.isLogined(request);
-
-      if (!logined) {
+      if (!request.isLogined()) {
         response.forward("/user/login.html");
         return;
       }
