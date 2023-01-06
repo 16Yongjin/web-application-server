@@ -5,8 +5,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,47 +16,59 @@ public class HttpResponse {
   private static final Logger log = LoggerFactory.getLogger(HttpResponse.class);
 
   private final DataOutputStream dos;
+  private Map<String, String> headers = new HashMap<>();
 
   public HttpResponse(OutputStream out) {
     this.dos = new DataOutputStream(out);
   }
 
-  public void forward(String url) throws IOException {
-    byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
-
-    Pattern pattern = Pattern.compile("\\.(\\w{2,4})$");
-    Matcher matcher = pattern.matcher(url);
-    matcher.find();
-    String fileExtension = matcher.group(1);
-
-    response200Header("text/" + fileExtension, body.length);
-    responseBody(body);
+  public void addHeader(String key, String value) {
+    headers.put(key, value);
   }
 
-  public void forwardBody(String bodyString) throws IOException {
-    byte[] body = bodyString.getBytes();
-    response200Header("text/html", body.length);
-    responseBody(body);
-  }
-
-  public void sendRedirect(String location) {
+  public void forward(String url) {
     try {
-      dos.writeBytes("HTTP/1.1 302 Found \r\n");
-      dos.writeBytes("Location: " + location + "\r\n");
+
+      byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
+
+      if (url.endsWith(".css")) {
+        headers.put("Content-Type", "text/css");
+      } else if (url.endsWith(".js")) {
+        headers.put("Content-Type", "application/js");
+      } else {
+        headers.put("Content-Type", "text/html;charset=utf-8");
+      }
+      headers.put("Content-Length", body.length + "");
+      response200Header(body.length);
+      responseBody(body);
     } catch (IOException e) {
       log.error(e.getMessage());
     }
   }
 
-  public void addHeader(String key, String value) throws IOException {
-    dos.writeBytes(key + ":  " + value + "\r\n");
+  public void forwardBody(String bodyString) {
+    byte[] contents = bodyString.getBytes();
+    headers.put("Content-Type", "text/html;charset=utf-8");
+    headers.put("Content-Length", contents.length + "");
+    response200Header(contents.length);
+    responseBody(contents);
   }
 
-  private void response200Header(String contentType, int lengthOfBodyContent) {
+  public void sendRedirect(String location) {
+    try {
+      dos.writeBytes("HTTP/1.1 302 Found \r\n");
+      processHeader();
+      dos.writeBytes("Location: " + location + " \r\n");
+      dos.writeBytes("\r\n");
+    } catch (IOException e) {
+      log.error(e.getMessage());
+    }
+  }
+
+  private void response200Header(int lengthOfBodyContent) {
     try {
       dos.writeBytes("HTTP/1.1 200 OK \r\n");
-      dos.writeBytes("Content-Type: " + contentType + ";charset=utf-8\r\n");
-      dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+      processHeader();
       dos.writeBytes("\r\n");
     } catch (IOException e) {
       log.error(e.getMessage());
@@ -65,7 +78,20 @@ public class HttpResponse {
   private void responseBody(byte[] body) {
     try {
       dos.write(body, 0, body.length);
+      dos.writeBytes("\r\n");
       dos.flush();
+    } catch (IOException e) {
+      log.error(e.getMessage());
+    }
+  }
+
+  private void processHeader() {
+    try {
+      Set<String> keys = headers.keySet();
+      for (String key : keys) {
+        String value = headers.get(key);
+        dos.writeBytes(key + ": " + value + " \r\n");
+      }
     } catch (IOException e) {
       log.error(e.getMessage());
     }
