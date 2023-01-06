@@ -1,4 +1,4 @@
-package util;
+package webserver;
 
 import static org.junit.Assert.assertEquals;
 
@@ -9,7 +9,7 @@ import java.io.InputStream;
 
 import org.junit.Test;
 
-import webserver.HttpRequest;
+import util.HttpMethods;
 
 public class HttpRequestTest {
   private String testDir = "./src/test/resources/";
